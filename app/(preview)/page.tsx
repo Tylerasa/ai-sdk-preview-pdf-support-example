@@ -22,6 +22,10 @@ import NextLink from "next/link";
 import { generateQuizTitle } from "./actions";
 import { AnimatePresence, motion } from "framer-motion";
 import { VercelIcon, GitIcon } from "@/components/icons";
+import StudyModes from '@/components/study-modes';
+import Flashcards from '@/components/flashcards';
+import Learn from '@/components/learn';
+import Match from '@/components/match';
 
 export default function ChatWithFiles() {
   const [files, setFiles] = useState<File[]>([]);
@@ -30,6 +34,7 @@ export default function ChatWithFiles() {
   );
   const [isDragging, setIsDragging] = useState(false);
   const [title, setTitle] = useState<string>();
+  const [studyMode, setStudyMode] = useState<'flashcards' | 'learn' | 'match' | 'test' | null>(null);
 
   const {
     submit,
@@ -97,13 +102,66 @@ export default function ChatWithFiles() {
   const clearPDF = () => {
     setFiles([]);
     setQuestions([]);
+    setStudyMode(null);
   };
 
   const progress = partialQuestions ? (partialQuestions.length / 4) * 100 : 0;
 
   if (questions.length === 4) {
+    if (studyMode === 'flashcards') {
+      return (
+        <Flashcards
+          questions={questions.map(q => ({
+            ...q,
+            answer: q.options[['A', 'B', 'C', 'D'].indexOf(q.answer)],
+          }))}
+          onBack={() => setStudyMode(null)}
+        />
+      );
+    }
+
+    if (studyMode === 'learn') {
+      return (
+        <Learn
+          questions={questions.map(q => ({
+            ...q,
+            answer: q.options[['A', 'B', 'C', 'D'].indexOf(q.answer)],
+          }))}
+          onBack={() => setStudyMode(null)}
+        />
+      );
+    }
+
+    if (studyMode === 'match') {
+      return (
+        <Match
+          questions={questions.map(q => ({
+            ...q,
+            answer: q.options[['A', 'B', 'C', 'D'].indexOf(q.answer)],
+          }))}
+          onBack={() => setStudyMode(null)}
+        />
+      );
+    }
+
+    if (studyMode === 'test') {
+      return (
+        <Quiz
+          title={title ?? "Quiz"}
+          questions={questions}
+          clearPDF={clearPDF}
+          onBack={() => setStudyMode(null)}
+        />
+      );
+    }
+
     return (
-      <Quiz title={title ?? "Quiz"} questions={questions} clearPDF={clearPDF} />
+      <StudyModes
+        title={title ?? "Quiz"}
+        questions={questions}
+        onModeSelect={setStudyMode}
+        onBack={clearPDF}
+      />
     );
   }
 
