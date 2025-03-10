@@ -1,10 +1,10 @@
-import { FC, useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Button } from './ui/button';
-import { Card } from './ui/card';
-import { ArrowLeft, Timer, Trophy, Heart, Star, Sparkles } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useXP } from '@/lib/xp-context';
+import { FC, useState, useEffect, useCallback } from "react";
+import { motion } from "framer-motion";
+import { Button } from "./ui/button";
+import { Card } from "./ui/card";
+import { ArrowLeft, Timer, Trophy, Heart, Star, Sparkles } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useXP } from "@/lib/xp-context";
 
 interface MatchProps {
   questions: Array<{
@@ -19,7 +19,7 @@ interface MatchProps {
 interface MatchItem {
   id: string;
   content: string;
-  type: 'question' | 'answer';
+  type: "question" | "answer";
   isSelected: boolean;
   isMatched: boolean;
   originalIndex: number;
@@ -45,25 +45,27 @@ const Match: FC<MatchProps> = ({ questions, onBack }) => {
       {
         id: `q${index}`,
         content: q.question,
-        type: 'question' as const,
+        type: "question" as const,
         isSelected: false,
         isMatched: false,
         originalIndex: index,
       },
       {
         id: `a${index}`,
-        content: q.answer, // Use the direct answer
-        type: 'answer' as const,
+        content: q.answer,
+        type: "answer" as const,
         isSelected: false,
         isMatched: false,
         originalIndex: index,
       },
     ]);
-    
+
     // Keep questions in order, shuffle only the answers
-    const questionItems = items.filter(item => item.type === 'question');
-    const answerItems = shuffleArray(items.filter(item => item.type === 'answer'));
-    
+    const questionItems = items.filter((item) => item.type === "question");
+    const answerItems = shuffleArray(
+      items.filter((item) => item.type === "answer")
+    );
+
     setMatchItems([...questionItems, ...answerItems]);
     setMatchedPairs(0);
     setHearts(3);
@@ -75,7 +77,7 @@ const Match: FC<MatchProps> = ({ questions, onBack }) => {
     let interval: NodeJS.Timeout;
     if (isActive && !completed) {
       interval = setInterval(() => {
-        setTimer(prev => prev + 1);
+        setTimer((prev) => prev + 1);
       }, 1000);
     }
     return () => clearInterval(interval);
@@ -91,7 +93,7 @@ const Match: FC<MatchProps> = ({ questions, onBack }) => {
   };
 
   const handleItemClick = (id: string) => {
-    const clickedItem = matchItems.find(item => item.id === id);
+    const clickedItem = matchItems.find((item) => item.id === id);
     if (!clickedItem || clickedItem.isMatched) return;
 
     if (!isActive) {
@@ -100,22 +102,26 @@ const Match: FC<MatchProps> = ({ questions, onBack }) => {
 
     if (!selectedItem || selectedItem === id) {
       if (selectedItem) {
-        const currentlySelected = matchItems.find(item => item.id === selectedItem);
+        const currentlySelected = matchItems.find(
+          (item) => item.id === selectedItem
+        );
         if (currentlySelected?.type === clickedItem.type) {
           return;
         }
       }
-      
+
       setSelectedItem(selectedItem === id ? null : id);
-      setMatchItems(items =>
-        items.map(item =>
-          item.id === id ? { ...item, isSelected: !item.isSelected, isWrong: false } : { ...item, isWrong: false }
+      setMatchItems((items) =>
+        items.map((item) =>
+          item.id === id
+            ? { ...item, isSelected: !item.isSelected, isWrong: false }
+            : { ...item, isWrong: false }
         )
       );
       return;
     }
 
-    const firstItem = matchItems.find(item => item.id === selectedItem)!;
+    const firstItem = matchItems.find((item) => item.id === selectedItem)!;
     const secondItem = clickedItem;
 
     if (firstItem.type === secondItem.type) {
@@ -127,9 +133,9 @@ const Match: FC<MatchProps> = ({ questions, onBack }) => {
     if (isPair) {
       const newMatchedPairs = matchedPairs + 1;
       setMatchedPairs(newMatchedPairs);
-      
-      setMatchItems(items =>
-        items.map(item =>
+
+      setMatchItems((items) =>
+        items.map((item) =>
           item.id === selectedItem || item.id === id
             ? { ...item, isMatched: true, isSelected: false, isWrong: false }
             : { ...item, isWrong: false }
@@ -143,26 +149,26 @@ const Match: FC<MatchProps> = ({ questions, onBack }) => {
         setShowStreak(true);
         setTimeout(() => setShowStreak(false), 2000);
       }
-      
+
       if (newMatchedPairs === questions.length) {
         setCompleted(true);
         setIsActive(false);
       }
     } else {
-      setMatchItems(items =>
-        items.map(item =>
+      setMatchItems((items) =>
+        items.map((item) =>
           item.id === id || item.id === selectedItem
             ? { ...item, isSelected: true, isWrong: true }
             : item
         )
       );
-      
-      setHearts(prev => Math.max(0, prev - 1));
+
+      setHearts((prev) => Math.max(0, prev - 1));
       setStreak(0);
 
       setTimeout(() => {
-        setMatchItems(items =>
-          items.map(item =>
+        setMatchItems((items) =>
+          items.map((item) =>
             (item.id === selectedItem || item.id === id) && !item.isMatched
               ? { ...item, isSelected: false, isWrong: false }
               : { ...item, isWrong: false }
@@ -175,42 +181,52 @@ const Match: FC<MatchProps> = ({ questions, onBack }) => {
         setIsActive(false);
       }
     }
-    
+
     setSelectedItem(null);
   };
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const calculateXP = () => {
+  const calculateXP = useCallback(() => {
     const baseXP = 20;
     const timeBonus = Math.max(0, 50 - Math.floor(timer / 10));
     const streakBonus = Math.floor(streak / 3) * 5;
     const heartsBonus = hearts * 5;
     return baseXP + timeBonus + streakBonus + heartsBonus;
-  };
+  }, [timer, streak, hearts]);
 
   useEffect(() => {
     if (completed && matchedPairs === questions.length) {
       const earnedXP = calculateXP();
       addXP(earnedXP);
     }
-  }, [completed, matchedPairs, questions.length]);
+  }, [completed, matchedPairs, questions.length, addXP, calculateXP]);
 
   const resetGame = () => {
     const questionItems = matchItems
-      .filter(item => item.type === 'question')
-      .map(item => ({ ...item, isMatched: false, isSelected: false, isWrong: false }));
-    
+      .filter((item) => item.type === "question")
+      .map((item) => ({
+        ...item,
+        isMatched: false,
+        isSelected: false,
+        isWrong: false,
+      }));
+
     const answerItems = shuffleArray(
       matchItems
-        .filter(item => item.type === 'answer')
-        .map(item => ({ ...item, isMatched: false, isSelected: false, isWrong: false }))
+        .filter((item) => item.type === "answer")
+        .map((item) => ({
+          ...item,
+          isMatched: false,
+          isSelected: false,
+          isWrong: false,
+        }))
     );
-    
+
     setMatchItems([...questionItems, ...answerItems]);
     setSelectedItem(null);
     setCompleted(false);
@@ -238,14 +254,14 @@ const Match: FC<MatchProps> = ({ questions, onBack }) => {
                 <Trophy className="w-24 h-24 mx-auto mb-6 text-[#FFD700]" />
                 <motion.div
                   className="absolute inset-0"
-                  animate={{ 
+                  animate={{
                     scale: [1, 1.2, 1],
-                    rotate: [0, 5, -5, 0]
+                    rotate: [0, 5, -5, 0],
                   }}
-                  transition={{ 
+                  transition={{
                     duration: 2,
                     repeat: Infinity,
-                    repeatType: "reverse"
+                    repeatType: "reverse",
                   }}
                 >
                   <Sparkles className="w-24 h-24 mx-auto text-[#FFD700] opacity-50" />
@@ -261,11 +277,11 @@ const Match: FC<MatchProps> = ({ questions, onBack }) => {
                 </motion.div>
               </div>
             )}
-            
+
             <h2 className="text-3xl font-bold mb-4">
               {hasWon ? "Great job!" : "Keep practicing!"}
             </h2>
-            
+
             <div className="space-y-4 mb-8">
               {hasWon && (
                 <motion.div
@@ -314,8 +330,8 @@ const Match: FC<MatchProps> = ({ questions, onBack }) => {
     );
   }
 
-  const questionItems = matchItems.filter(item => item.type === 'question');
-  const answerItems = matchItems.filter(item => item.type === 'answer');
+  const questionItems = matchItems.filter((item) => item.type === "question");
+  const answerItems = matchItems.filter((item) => item.type === "answer");
 
   return (
     <div className="container max-w-2xl mx-auto p-4">
@@ -370,21 +386,27 @@ const Match: FC<MatchProps> = ({ questions, onBack }) => {
             >
               <Card
                 className={cn(
-                  'cursor-pointer transition-all duration-200 hover:shadow-md relative mb-2 min-h-[60px] border-2',
-                  item.isMatched && 'bg-[#58CC02]/10 border-[#58CC02]',
-                  item.isWrong && 'bg-red-100 border-red-500 shake',
-                  item.isSelected && !item.isWrong && 'border-[#58CC02]',
-                  !item.isMatched && !item.isSelected && 'hover:border-[#58CC02]/50'
+                  "cursor-pointer transition-all duration-200 hover:shadow-md relative mb-2 min-h-[60px] border-2",
+                  item.isMatched && "bg-[#58CC02]/10 border-[#58CC02]",
+                  item.isWrong && "bg-red-100 border-red-500 shake",
+                  item.isSelected && !item.isWrong && "border-[#58CC02]",
+                  !item.isMatched &&
+                    !item.isSelected &&
+                    "hover:border-[#58CC02]/50"
                 )}
                 onClick={() => handleItemClick(item.id)}
               >
                 <div className="p-3 flex items-center">
-                  <span className="text-base font-bold text-muted-foreground mr-3">{index + 1}.</span>
-                  <p className={cn(
-                    'text-sm flex-1',
-                    item.isMatched && 'text-[#58CC02] font-medium',
-                    item.isWrong && 'text-red-500'
-                  )}>
+                  <span className="text-base font-bold text-muted-foreground mr-3">
+                    {index + 1}.
+                  </span>
+                  <p
+                    className={cn(
+                      "text-sm flex-1",
+                      item.isMatched && "text-[#58CC02] font-medium",
+                      item.isWrong && "text-red-500"
+                    )}
+                  >
                     {item.content}
                   </p>
                 </div>
@@ -403,21 +425,27 @@ const Match: FC<MatchProps> = ({ questions, onBack }) => {
             >
               <Card
                 className={cn(
-                  'cursor-pointer transition-all duration-200 hover:shadow-md relative mb-2 min-h-[60px] border-2',
-                  item.isMatched && 'bg-[#58CC02]/10 border-[#58CC02]',
-                  item.isWrong && 'bg-red-100 border-red-500 shake',
-                  item.isSelected && !item.isWrong && 'border-[#58CC02]',
-                  !item.isMatched && !item.isSelected && 'hover:border-[#58CC02]/50'
+                  "cursor-pointer transition-all duration-200 hover:shadow-md relative mb-2 min-h-[60px] border-2",
+                  item.isMatched && "bg-[#58CC02]/10 border-[#58CC02]",
+                  item.isWrong && "bg-red-100 border-red-500 shake",
+                  item.isSelected && !item.isWrong && "border-[#58CC02]",
+                  !item.isMatched &&
+                    !item.isSelected &&
+                    "hover:border-[#58CC02]/50"
                 )}
                 onClick={() => handleItemClick(item.id)}
               >
                 <div className="p-3 flex items-center">
-                  <span className="text-base font-bold text-muted-foreground mr-3">{questionItems.length + index + 1}.</span>
-                  <p className={cn(
-                    'text-sm flex-1',
-                    item.isMatched && 'text-[#58CC02] font-medium',
-                    item.isWrong && 'text-red-500'
-                  )}>
+                  <span className="text-base font-bold text-muted-foreground mr-3">
+                    {questionItems.length + index + 1}.
+                  </span>
+                  <p
+                    className={cn(
+                      "text-sm flex-1",
+                      item.isMatched && "text-[#58CC02] font-medium",
+                      item.isWrong && "text-red-500"
+                    )}
+                  >
                     {item.content}
                   </p>
                 </div>
@@ -430,4 +458,4 @@ const Match: FC<MatchProps> = ({ questions, onBack }) => {
   );
 };
 
-export default Match; 
+export default Match;

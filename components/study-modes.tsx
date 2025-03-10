@@ -29,9 +29,9 @@ const StudyModes: FC<StudyModesProps> = ({ title, onModeSelect, onBack }) => {
       mode: 'flashcards' as const,
       color: 'bg-[#58CC02]',
       textColor: 'text-[#58CC02]',
-      progress: 0,
-      xpRange: '5-50 XP',
-      xpDescription: 'Based on time spent and cards reviewed'
+    //   progress: 0,
+    //   xpRange: '5-50 XP',
+    //   xpDescription: 'Based on time spent and cards reviewed'
     },
     {
       name: 'Learn',
@@ -40,7 +40,6 @@ const StudyModes: FC<StudyModesProps> = ({ title, onModeSelect, onBack }) => {
       mode: 'learn' as const,
       color: 'bg-[#CE82FF]',
       textColor: 'text-[#CE82FF]',
-      progress: 0,
       xpRange: '10-40 XP',
       xpDescription: 'Based on correct answers and streaks'
     },
@@ -51,7 +50,6 @@ const StudyModes: FC<StudyModesProps> = ({ title, onModeSelect, onBack }) => {
       mode: 'match' as const,
       color: 'bg-[#FF9600]',
       textColor: 'text-[#FF9600]',
-      progress: 0,
       xpRange: '20-75 XP',
       xpDescription: 'Based on speed, hearts, and streaks'
     },
@@ -62,7 +60,6 @@ const StudyModes: FC<StudyModesProps> = ({ title, onModeSelect, onBack }) => {
       mode: 'test' as const,
       color: 'bg-[#FF4B4B]',
       textColor: 'text-[#FF4B4B]',
-      progress: 0,
       xpRange: '15-60 XP',
       xpDescription: 'Based on test performance'
     },
@@ -111,9 +108,9 @@ const StudyModes: FC<StudyModesProps> = ({ title, onModeSelect, onBack }) => {
                       <span className="text-muted-foreground text-xs">• {mode.xpDescription}</span>
                     </div>
                   </div>
-                  <div className="flex flex-col items-end justify-center gap-2 shrink-0">
+                  {/* <div className="flex flex-col items-end justify-center gap-2 shrink-0">
                     <Progress value={mode.progress} className="w-16 h-2" />
-                  </div>
+                  </div> */}
                 </div>
               </CardContent>
             </Card>

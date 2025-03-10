@@ -1,9 +1,15 @@
-import { FC, useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Button } from './ui/button';
-import { AudioButton } from './ui/audio-button';
-import { ChevronLeft, ChevronRight, RotateCcw, Keyboard, Star } from 'lucide-react';
-import { useXP } from '@/lib/xp-context';
+import { FC, useState, useEffect, useCallback } from "react";
+import { motion } from "framer-motion";
+import { Button } from "./ui/button";
+import { AudioButton } from "./ui/audio-button";
+import {
+  ChevronLeft,
+  ChevronRight,
+  RotateCcw,
+  Keyboard,
+  Star,
+} from "lucide-react";
+import { useXP } from "@/lib/xp-context";
 import {
   Dialog,
   DialogContent,
@@ -38,125 +44,140 @@ const Flashcards: FC<FlashcardsProps> = ({ questions, onBack }) => {
   useEffect(() => {
     const timer = setInterval(() => {
       const now = new Date();
-      const timeSpent = Math.floor((now.getTime() - startTime.getTime()) / 1000);
-      setStudyStats(prev => ({ ...prev, timeSpent }));
+      const timeSpent = Math.floor(
+        (now.getTime() - startTime.getTime()) / 1000
+      );
+      setStudyStats((prev) => ({ ...prev, timeSpent }));
     }, 1000);
 
     return () => clearInterval(timer);
   }, [startTime]);
 
-  useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        return;
-      }
-
-      switch (e.key.toLowerCase()) {
-        case ' ':
-        case 'enter':
-          e.preventDefault();
-          handleCardClick(null);
-          break;
-        case 'arrowleft':
-          e.preventDefault();
-          previousCard();
-          break;
-        case 'arrowright':
-          e.preventDefault();
-          nextCard();
-          break;
-        case 'e':
-          e.preventDefault();
-          setShowExplanation(prev => !prev);
-          break;
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [currentIndex, isFlipped]);
-
   const currentCard = questions[currentIndex];
   const progress = ((currentIndex + 1) / questions.length) * 100;
 
-  const nextCard = () => {
+  const nextCard = useCallback(() => {
     if (currentIndex < questions.length - 1) {
       setIsFlipped(false);
       setShowExplanation(false);
       setCurrentIndex(currentIndex + 1);
     }
-  };
+  }, [currentIndex, questions.length]);
 
-  const previousCard = () => {
+  const previousCard = useCallback(() => {
     if (currentIndex > 0) {
       setIsFlipped(false);
       setShowExplanation(false);
       setCurrentIndex(currentIndex - 1);
     }
-  };
+  }, [currentIndex]);
 
-  const resetCards = () => {
+  const resetCards = useCallback(() => {
     setCurrentIndex(0);
     setIsFlipped(false);
     setShowExplanation(false);
-  };
+  }, []);
 
-  const calculateXP = () => {
+  const calculateXP = useCallback(() => {
     const baseXP = 5;
     const timeBonus = Math.min(20, Math.floor(studyStats.timeSpent / 60) * 2); // 2 XP per minute, max 20
-    const completionBonus = studyStats.completedCards.size === questions.length ? 10 : 0;
+    const completionBonus =
+      studyStats.completedCards.size === questions.length ? 10 : 0;
     const flipBonus = Math.min(15, Math.floor(studyStats.flips / 5)); // 1 XP per 5 flips, max 15
     return baseXP + timeBonus + completionBonus + flipBonus;
-  };
+  }, [
+    studyStats.timeSpent,
+    studyStats.completedCards,
+    questions.length,
+    studyStats.flips,
+  ]);
 
-  const handleCardClick = (e: React.MouseEvent | null) => {
-    if (e && (e.target as HTMLElement).closest('button')) {
-      return;
-    }
-    setIsFlipped(!isFlipped);
-    setStudyStats(prev => {
-      const newCompletedCards = new Set(prev.completedCards);
-      if (!isFlipped) {
-        newCompletedCards.add(currentIndex);
+  const handleCardClick = useCallback(
+    (e: React.MouseEvent | null) => {
+      if (e && (e.target as HTMLElement).closest("button")) {
+        return;
       }
-      return {
-        ...prev,
-        flips: prev.flips + 1,
-        completedCards: newCompletedCards
-      };
-    });
+      setIsFlipped(!isFlipped);
+      setStudyStats((prev) => {
+        const newCompletedCards = new Set(prev.completedCards);
+        if (!isFlipped) {
+          newCompletedCards.add(currentIndex);
+        }
+        return {
+          ...prev,
+          flips: prev.flips + 1,
+          completedCards: newCompletedCards,
+        };
+      });
 
-    // Award XP when all cards have been viewed at least once
-    if (!isFlipped && !studyStats.completedCards.has(currentIndex)) {
-      const willBeComplete = studyStats.completedCards.size + 1 === questions.length;
-      if (willBeComplete) {
-        const earnedXP = calculateXP();
-        addXP(earnedXP);
+      // Award XP when all cards have been viewed at least once
+      if (!isFlipped && !studyStats.completedCards.has(currentIndex)) {
+        const willBeComplete =
+          studyStats.completedCards.size + 1 === questions.length;
+        if (willBeComplete) {
+          const earnedXP = calculateXP();
+          addXP(earnedXP);
+        }
       }
-    }
-  };
+    },
+    [
+      currentIndex,
+      studyStats.completedCards,
+      questions.length,
+      addXP,
+      calculateXP,
+      isFlipped,
+    ]
+  );
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
+
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      ) {
+        return;
+      }
+
+      switch (e.key.toLowerCase()) {
+        case " ":
+        case "enter":
+          e.preventDefault();
+          handleCardClick(null);
+          break;
+        case "arrowleft":
+          e.preventDefault();
+          previousCard();
+          break;
+        case "arrowright":
+          e.preventDefault();
+          nextCard();
+          break;
+        case "e":
+          e.preventDefault();
+          setShowExplanation((prev) => !prev);
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyPress);
+    return () => window.removeEventListener("keydown", handleKeyPress);
+  }, [currentIndex, isFlipped, handleCardClick, nextCard, previousCard]);
 
   return (
     <div className="container max-w-4xl mx-auto p-4">
       <div className="mb-8">
-        <Button
-          variant="ghost"
-          onClick={onBack}
-          className="mb-4"
-        >
+        <Button variant="ghost" onClick={onBack} className="mb-4">
           ← Back to Study Modes
         </Button>
         <div className="flex justify-between items-center mb-4">
-          <Button
-            variant="outline"
-            size="icon"
-          >
+          <Button variant="outline" size="icon">
             <Dialog>
               <DialogTrigger asChild>
                 <Button variant="outline" size="icon">
@@ -169,19 +190,27 @@ const Flashcards: FC<FlashcardsProps> = ({ questions, onBack }) => {
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                   <div className="grid grid-cols-2 items-center gap-4">
-                    <kbd className="px-2 py-1.5 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500">Space</kbd>
+                    <kbd className="px-2 py-1.5 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500">
+                      Space
+                    </kbd>
                     <span>Flip card</span>
                   </div>
                   <div className="grid grid-cols-2 items-center gap-4">
-                    <kbd className="px-2 py-1.5 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500">←</kbd>
+                    <kbd className="px-2 py-1.5 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500">
+                      ←
+                    </kbd>
                     <span>Previous card</span>
                   </div>
                   <div className="grid grid-cols-2 items-center gap-4">
-                    <kbd className="px-2 py-1.5 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500">→</kbd>
+                    <kbd className="px-2 py-1.5 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500">
+                      →
+                    </kbd>
                     <span>Next card</span>
                   </div>
                   <div className="grid grid-cols-2 items-center gap-4">
-                    <kbd className="px-2 py-1.5 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500">E</kbd>
+                    <kbd className="px-2 py-1.5 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500">
+                      E
+                    </kbd>
                     <span>Toggle explanation</span>
                   </div>
                 </div>
@@ -191,7 +220,8 @@ const Flashcards: FC<FlashcardsProps> = ({ questions, onBack }) => {
           <div>
             <h1 className="text-2xl font-bold">Flashcards</h1>
             <p className="text-sm text-muted-foreground">
-              Session time: {formatTime(studyStats.timeSpent)} | Cards flipped: {studyStats.flips}
+              Session time: {formatTime(studyStats.timeSpent)} | Cards flipped:{" "}
+              {studyStats.flips}
             </p>
             {studyStats.completedCards.size === questions.length && (
               <motion.div
@@ -199,8 +229,8 @@ const Flashcards: FC<FlashcardsProps> = ({ questions, onBack }) => {
                 animate={{ opacity: 1, y: 0 }}
                 className="text-[#58CC02] font-bold flex items-center gap-1 mt-1"
               >
-                <Star className="w-4 h-4 text-[#FFD700]" fill="currentColor" />
-                +{calculateXP()} XP
+                <Star className="w-4 h-4 text-[#FFD700]" fill="currentColor" />+
+                {calculateXP()} XP
               </motion.div>
             )}
           </div>
@@ -223,16 +253,16 @@ const Flashcards: FC<FlashcardsProps> = ({ questions, onBack }) => {
           animate={{ rotateY: isFlipped ? 180 : 0 }}
           transition={{ duration: 0.6 }}
           style={{
-            transformStyle: 'preserve-3d',
+            transformStyle: "preserve-3d",
           }}
         >
           <div
             className={`absolute w-full min-h-[400px] backface-hidden rounded-xl p-8 flex flex-col items-center justify-center text-center ${
-              isFlipped ? 'invisible' : ''
+              isFlipped ? "invisible" : ""
             }`}
             style={{
-              backgroundColor: 'hsl(var(--card))',
-              border: '1px solid hsl(var(--border))',
+              backgroundColor: "hsl(var(--card))",
+              border: "1px solid hsl(var(--border))",
             }}
           >
             <div className="flex items-center gap-2 mb-4">
@@ -240,17 +270,19 @@ const Flashcards: FC<FlashcardsProps> = ({ questions, onBack }) => {
               <AudioButton text={currentCard.question} />
             </div>
             <p className="text-lg">{currentCard.question}</p>
-            <p className="text-sm text-muted-foreground mt-4">Click card to flip</p>
+            <p className="text-sm text-muted-foreground mt-4">
+              Click card to flip
+            </p>
           </div>
 
           <div
             className={`absolute w-full min-h-[400px] backface-hidden rounded-xl p-8 flex flex-col items-center justify-center text-center ${
-              !isFlipped ? 'invisible' : ''
+              !isFlipped ? "invisible" : ""
             }`}
             style={{
-              backgroundColor: 'hsl(var(--card))',
-              border: '1px solid hsl(var(--border))',
-              transform: 'rotateY(180deg)',
+              backgroundColor: "hsl(var(--card))",
+              border: "1px solid hsl(var(--border))",
+              transform: "rotateY(180deg)",
             }}
           >
             <div className="flex items-center gap-2 mb-4">
@@ -268,7 +300,7 @@ const Flashcards: FC<FlashcardsProps> = ({ questions, onBack }) => {
                     setShowExplanation(!showExplanation);
                   }}
                 >
-                  {showExplanation ? 'Hide' : 'Show'} Explanation
+                  {showExplanation ? "Hide" : "Show"} Explanation
                 </Button>
                 {showExplanation && (
                   <div className="mt-4">
@@ -283,7 +315,9 @@ const Flashcards: FC<FlashcardsProps> = ({ questions, onBack }) => {
                 )}
               </>
             )}
-            <p className="text-sm text-muted-foreground mt-4">Click card to flip</p>
+            <p className="text-sm text-muted-foreground mt-4">
+              Click card to flip
+            </p>
           </div>
         </motion.div>
       </div>
@@ -297,11 +331,7 @@ const Flashcards: FC<FlashcardsProps> = ({ questions, onBack }) => {
           <ChevronLeft className="mr-2 h-4 w-4" />
           Previous
         </Button>
-        <Button
-          variant="ghost"
-          onClick={resetCards}
-          className="mx-2"
-        >
+        <Button variant="ghost" onClick={resetCards} className="mx-2">
           <RotateCcw className="mr-2 h-4 w-4" />
           Reset
         </Button>
@@ -318,4 +348,4 @@ const Flashcards: FC<FlashcardsProps> = ({ questions, onBack }) => {
   );
 };
 
-export default Flashcards; 
+export default Flashcards;

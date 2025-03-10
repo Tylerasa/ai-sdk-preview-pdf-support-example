@@ -15,9 +15,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import Quiz from "@/components/quiz";
-import { Link } from "@/components/ui/link";
 import NextLink from "next/link";
 import { generateQuizTitle } from "./actions";
 import { AnimatePresence, motion } from "framer-motion";
@@ -28,8 +26,9 @@ import Learn from '@/components/learn';
 import Match from '@/components/match';
 import { XPProvider, useXP } from '@/lib/xp-context';
 import { Star } from 'lucide-react';
+import React from "react";
 
-function XPDisplay() {
+const XPDisplay = React.memo(function XPDisplay() {
   const { totalXP } = useXP();
   return (
     <div className="fixed top-4 right-4 bg-[#58CC02] text-white px-4 py-2 rounded-full font-bold text-lg flex items-center gap-2">
@@ -37,7 +36,7 @@ function XPDisplay() {
       {totalXP} XP
     </div>
   );
-}
+});
 
 function UploadUI({ 
   files, 
@@ -103,7 +102,7 @@ function UploadUI({
               Learn from Any PDF
             </CardTitle>
             <CardDescription className="text-base">
-              Upload a PDF and we'll create interactive exercises to help you learn the content
+              Upload a PDF and we&apos;ll create interactive exercises to help you learn the content
             </CardDescription>
           </div>
         </CardHeader>
@@ -303,7 +302,13 @@ function MainContent() {
         />
       )}
       {studyMode === 'flashcards' && (
-        <Flashcards questions={questions} onBack={() => setStudyMode(null)} />
+        <Flashcards 
+          questions={questions.map(q => ({
+            ...q,
+            answer: q.options[['A', 'B', 'C', 'D'].indexOf(q.answer)]
+          }))} 
+          onBack={() => setStudyMode(null)} 
+        />
       )}
       {studyMode === 'match' && (
         <Match 

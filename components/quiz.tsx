@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -10,10 +10,12 @@ import {
   RefreshCw,
   FileText,
   ArrowLeft,
+  Star,
 } from "lucide-react";
 import QuizScore from "./score";
 import QuizReview from "./quiz-overview";
 import { Question } from "@/lib/schemas";
+import { useXP } from "@/lib/xp-context";
 
 type QuizProps = {
   questions: Question[];
@@ -80,6 +82,7 @@ export default function Quiz({
   title = "Quiz",
   onBack,
 }: QuizProps) {
+  const { addXP } = useXP();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<string[]>(
     Array(questions.length).fill(null),
@@ -87,6 +90,7 @@ export default function Quiz({
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [score, setScore] = useState<number | null>(null);
   const [progress, setProgress] = useState(0);
+  const [xpAwarded, setXpAwarded] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -94,6 +98,14 @@ export default function Quiz({
     }, 100);
     return () => clearTimeout(timer);
   }, [currentQuestionIndex, questions.length]);
+
+  const calculateXP = useCallback(() => {
+    if (!score) return 0;
+    const baseXP = 15;
+    const correctAnswersBonus = Math.floor((score / questions.length) * 30);
+    const perfectScoreBonus = score === questions.length ? 15 : 0;
+    return baseXP + correctAnswersBonus + perfectScoreBonus;
+  }, [score, questions.length]);
 
   const handleSelectAnswer = (answer: string) => {
     if (!isSubmitted) {
@@ -124,6 +136,14 @@ export default function Quiz({
     }, 0);
     setScore(correctAnswers);
   };
+
+  useEffect(() => {
+    if (isSubmitted && score !== null && !xpAwarded) {
+      const earnedXP = calculateXP();
+      addXP(earnedXP);
+      setXpAwarded(true);
+    }
+  }, [isSubmitted, score, xpAwarded, addXP, calculateXP]);
 
   const handleReset = () => {
     setAnswers(Array(questions.length).fill(null));
@@ -200,6 +220,7 @@ export default function Quiz({
                     <QuizScore
                       correctAnswers={score ?? 0}
                       totalQuestions={questions.length}
+                      earnedXP={calculateXP()}
                     />
                     <div className="space-y-12">
                       <QuizReview questions={questions} userAnswers={answers} />
