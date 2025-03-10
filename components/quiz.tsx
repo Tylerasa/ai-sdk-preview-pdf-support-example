@@ -9,6 +9,7 @@ import {
   X,
   RefreshCw,
   FileText,
+  ArrowLeft,
 } from "lucide-react";
 import QuizScore from "./score";
 import QuizReview from "./quiz-overview";
@@ -18,6 +19,7 @@ type QuizProps = {
   questions: Question[];
   clearPDF: () => void;
   title: string;
+  onBack?: () => void;
 };
 
 const QuestionCard: React.FC<{
@@ -76,6 +78,7 @@ export default function Quiz({
   questions,
   clearPDF,
   title = "Quiz",
+  onBack,
 }: QuizProps) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<string[]>(
@@ -135,6 +138,15 @@ export default function Quiz({
   return (
     <div className="min-h-screen bg-background text-foreground">
       <main className="container mx-auto px-4 py-12 max-w-4xl">
+        {onBack && (
+          <Button
+            variant="ghost"
+            onClick={onBack}
+            className="mb-8"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Study Modes
+          </Button>
+        )}
         <h1 className="text-3xl font-bold mb-8 text-center text-foreground">
           {title}
         </h1>
